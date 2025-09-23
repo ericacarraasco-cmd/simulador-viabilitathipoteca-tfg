@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Estimació de Pagament Mensual</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      line-height: 1.4;
+    }
+    .hidden { display: none; }
+    .btn {
+      margin: 5px;
+      padding: 10px 20px;
+      border: 2px solid black;
+      background-color: white;
+      color: black;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .btn:hover { background-color: #f0f0f0; }
+    .btn.selected {
+      background-color: green;
+      color: white;
+      border-color: green;
+    }
+    input {
+      padding: 8px;
+      margin: 10px 0;
+      width: 220px;
+    }
+
+    .section-title {
+      text-decoration: underline;
+      font-weight: 700;
+      display: inline-block;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      font-size: 1.05rem;
+    }
+
+    .option-block {
+      margin: 12px 0 18px 0;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+    .option-name {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .summary-header {
+      margin-bottom: 12px;
+      padding: 8px;
+      background: #f6f6f6;
+      border-radius: 6px;
+    }
+    ul {
+      margin: 8px 0 0 18px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Estudi de la viabilitat de la compra d'un habitatge unifamiliar (60m²)</h2>
+
+  <!-- Pas 0: Localització -->
+  <div id="locationSection">
+    <p>A quina comarca vols localitzar la teva vivenda?</p>
+    <button class="btn" onclick="setLocation('AltEmporda', this)">Alt Empordà</button>
+    <button class="btn" onclick="setLocation('BaixEmporda', this)">Baix Empordà</button>
+    <button class="btn" onclick="setLocation('LaSelva', this)">La Selva</button>
+  </div>
+
+  <!-- Pas 1: Sou -->
+  <div id="salarySection" class="hidden">
+    <label for="salary">Quin és el teu sou net mensual?</label><br>
+    <input type="number" id="salary" placeholder="Introdueix el teu sou"><br>
+    <button class="btn" onclick="showSavings(this)">Continuar</button>
+  </div>
+
+  <!-- Pas 2: Estalvi -->
+  <div id="savingsSection" class="hidden">
+    <label for="savings">Quin és el teu estalvi total actual?</label><br>
+    <input type="number" id="savings" placeholder="Introdueix el teu estalvi total"><br>
+    <button class="btn" onclick="showCapacity(this)">Continuar</button>
+  </div>
+
+  <!-- Pas 3: Capacitat d'estalvi -->
+  <div id="capacitySection" class="hidden">
+    <p>Quina capacitat aproximada d'estalvi mensual tens?</p>
+    <button class="btn" onclick="chooseOption('Alt', this)">Alt (~20%)</button>
+    <button class="btn" onclick="chooseOption('Baix', this)">Baix (~5%)</button>
+  </div>
+
+  <!-- Resultat -->
+  <div id="result" class="hidden">
+    <h3>Resum</h3>
+    <div id="summaryText"></div>
+  </div>
+
+
+  <!-- Reset -->
+  <button class="btn" onclick="resetPage()">Reinicia</button>
+
+<script>
+  let chosenOption = "";
+  let monthlyLimit = 0;
+  let savingsCapacity = 0;
+  let selectedLocation = "";
+
+  const data = {
+    AltEmporda: {
+      despesInicials: [8925.84, 15301.44, 15301.44, 9995.92, 17135.86, 17135.86],
+      quotaMensual:   [579.04, 463.23, 550.09, 648.46, 518.77, 616.04],
+      dipositInicial: [0, 25502.40, 6375.60, 0, 28559.76, 7139.94]
+    },
+    BaixEmporda: {
+      despesInicials: [9871.72, 16922.95, 16922.95, 10522.13, 18037.94, 18037.94],
+      quotaMensual:   [640.40, 512.32, 608.38, 682.60, 546.08, 648.47],
+      dipositInicial: [0, 28042.92, 7051.23, 0, 30063.24, 7515.81]
+    },
+    LaSelva: {
+      despesInicials: [7795.62, 13363.92, 13363.92, 8133.40, 12987.50, 12987.50],
+      quotaMensual:   [505.72, 480.43, 480.43, 494.22, 395.92, 469.64],
+      dipositInicial: [0, 22273.00, 5560.30, 0, 21615.83, 5411.46]
+    }
+  };
+
+  const optionNames = [
+    "Aval ICO",
+    "Condicions estàndard",
+    "Hipoteca Jove Santander",
+    "Aval ICO",
+    "Condicions estàndard",
+    "Hipoteca Jove Santander"
+  ];
+
+  // Helper: mark selected button within a section
+  function selectButton(btn, sectionId) {
+    const buttons = document.querySelectorAll(`#${sectionId} .btn`);
+    buttons.forEach(b => b.classList.remove("selected"));
+    if (btn) btn.classList.add("selected");
+  }
+
+  // Location
+  function setLocation(loc, btn) {
+    selectedLocation = loc;
+    selectButton(btn, "locationSection");
+    document.getElementById("salarySection").classList.remove("hidden");
+  }
+
+  // Salary continue
+  function showSavings(btn) {
+    if (!selectedLocation) { alert("Primer selecciona la localització de la vivenda."); return; }
+    const salaryVal = document.getElementById("salary").value;
+    if (!salaryVal) { alert("Si us plau, introdueix el teu sou mensual."); return; }
+    const salary = parseFloat(salaryVal);
+    monthlyLimit = salary * 0.35;
+    selectButton(btn, "salarySection");
+    document.getElementById("savingsSection").classList.remove("hidden");
+  }
+
+  // Savings continue
+  function showCapacity(btn) {
+    const savingsVal = document.getElementById("savings").value;
+    if (!savingsVal) { alert("Si us plau, introdueix el teu estalvi total."); return; }
+    selectButton(btn, "savingsSection");
+    document.getElementById("capacitySection").classList.remove("hidden");
+  }
+
+  // Choose capacity (Alt/Baix)
+  function chooseOption(option, btn) {
+    chosenOption = option;
+    selectButton(btn, "capacitySection");
+
+    const salary = parseFloat(document.getElementById("salary").value) || 0;
+    const savings = parseFloat(document.getElementById("savings").value) || 0;
+    savingsCapacity = (chosenOption === "Alt") ? salary * 0.20 : salary * 0.05;
+
+    const dataset = data[selectedLocation];
+    const despesInicials = dataset.despesInicials;
+    const quotaMensual = dataset.quotaMensual;
+    const dipositInicial = dataset.dipositInicial;
+
+    let indexesToCheck = [0,1,2,3,4,5];
+    let restrictionText = "";
+    if (salary > 2355.73) {
+      indexesToCheck = [1,4];
+      restrictionText = "<div style='margin-bottom:10px;color:#333;'>Amb el teu sou, no pots accedir a l’aval ICO ni a les condicions del Santander, ja que excedeixes el límit de 2.355,73 € mensuals. Per tant, només pots valorar les opcions corresponents a Condicions estàndard (obra nova i segona mà).</div>";
+    }
+
+    let html = "";
+    html += `<div class="summary-header">
+               <div><strong>Comarca:</strong> ${selectedLocation.replace(/([A-Z])/g, " $1").trim()}</div>
+               <div><strong>Sou mensual:</strong> €${salary.toFixed(2)}</div>
+               <div><strong>Estalvi total generat:</strong> €${savings.toFixed(2)}</div>
+               <div><strong>Quota màxima mensual (35%):</strong> €${monthlyLimit.toFixed(2)}</div>
+               <div><strong>Capacitat d'estalvi mensual (${chosenOption}):</strong> €${savingsCapacity.toFixed(2)}</div>
+             </div>`;
+
+    if (restrictionText) html += restrictionText;
+
+    html += `<div class="section-title"><strong>Obra nova</strong></div>`;
+    for (let i = 0; i <= 2; i++) {
+      if (!indexesToCheck.includes(i)) continue;
+      html += buildOptionHTML(i, optionNames[i], despesInicials[i], quotaMensual[i], dipositInicial[i], savings);
+    }
+
+    html += `<div style="margin-top:16px" class="section-title"><strong>Segona mà</strong></div>`;
+    for (let i = 3; i <= 5; i++) {
+      if (!indexesToCheck.includes(i)) continue;
+      html += buildOptionHTML(i, optionNames[i], despesInicials[i], quotaMensual[i], dipositInicial[i], savings);
+    }
+
+    document.getElementById("result").classList.remove("hidden");
+    document.getElementById("summaryText").innerHTML = html;
+  }
+
+  // Build one option block as HTML
+  function buildOptionHTML(index, name, despes, quota, diposit, savings) {
+    const totalNeeded = despes + diposit;
+    const affordable = (savings >= totalNeeded) && (monthlyLimit >= quota);
+    const missing = Math.max(0, totalNeeded - savings);
+
+    let block = `<div class="option-block">`;
+    block += `<div class="option-name">${name}</div>`;
+    block += `<p>Aquesta opció requereix pagar una quota mensual de <strong>€${quota.toFixed(2)}</strong>, <strong>${monthlyLimit >= quota ? "dins del teu llindar" : "fora del teu llindar"}</strong>.</p>`;
+
+    if (affordable) {
+      block += `<p>Per liquidar les despeses i dipòsit inicial necessites <strong>€${totalNeeded.toFixed(2)}</strong>. Actualment tens uns estalvis de <strong>€${savings.toFixed(2)}</strong>.</p>`;
+      block += `<ul><li>Enhorabona! Pots procedir a la compra de l'habitatge.</li></ul>`;
+    } else {
+      if (monthlyLimit < quota) {
+        block += `<p>Et recomano intentar buscar opcions per augmentar el teu sou.</p>`;
+      }
+
+      block += `<p>Pel que fa a les despeses i dipòsit inicial necessites <strong>€${totalNeeded.toFixed(2)}</strong>. Actualment tens uns estalvis de <strong>€${savings.toFixed(2)}</strong>.</p>`;
+      block += `<ul><li>Em sap greu... Encara no pots comprar la teva primera vivenda.</li>`;
+
+      if (savingsCapacity > 0 && missing > 0) {
+        const months = missing / savingsCapacity;
+        const years = Math.floor(months / 12);
+        const remainingMonths = Math.floor(months % 12);
+        const days = Math.floor((months % 1) * 30);
+        block += `<li>Si continues estalviant al ritme actual, en ${years} anys, ${remainingMonths} mesos i ${days} dies et podràs permetre aquesta opció.</li>`;
+      }
+      block += `</ul>`;
+    }
+
+    block += `</div>`;
+    return block;
+  }
+
+  function resetPage() {
+    location.reload();
+  }
+</script>
+
+<p style="font-size: 0.85rem; color: blue; margin-top: 30px;">
+    *Majors de 35 anys únicament podran regir-se a les condicions estàndard
+  </p>
+
+</body>
+</html>
