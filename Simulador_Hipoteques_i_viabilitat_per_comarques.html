@@ -219,39 +219,45 @@
   }
 
   // Build one option block as HTML
-  function buildOptionHTML(index, name, despes, quota, diposit, savings) {
-    const totalNeeded = despes + diposit;
-    const affordable = (savings >= totalNeeded) && (monthlyLimit >= quota);
-    const missing = Math.max(0, totalNeeded - savings);
+ function buildOptionHTML(index, name, despes, quota, diposit, savings) {
+  const totalNeeded = despes + diposit;
+  const affordable = (savings >= totalNeeded) && (monthlyLimit >= quota);
+  const missing = Math.max(0, totalNeeded - savings);
 
-    let block = `<div class="option-block">`;
-    block += `<div class="option-name">${name}</div>`;
-    block += `<p>Aquesta opció requereix pagar una quota mensual de <strong>€${quota.toFixed(2)}</strong>, <strong>${monthlyLimit >= quota ? "dins del teu llindar" : "fora del teu llindar"}</strong>.</p>`;
+  // Unterschiedlicher Text, je nach Option
+  const despesText = name.includes("Aval ICO")
+    ? "Pel que fa a les despeses inicials necessites"
+    : "Pel que fa a les despeses i dipòsit inicial necessites";
 
-    if (affordable) {
-      block += `<p>Per liquidar les despeses i dipòsit inicial necessites <strong>€${totalNeeded.toFixed(2)}</strong>. Actualment tens uns estalvis de <strong>€${savings.toFixed(2)}</strong>.</p>`;
-      block += `<ul><li>Enhorabona! Pots procedir a la compra de l'habitatge.</li></ul>`;
-    } else {
-      if (monthlyLimit < quota) {
-        block += `<p>Et recomano intentar buscar opcions per augmentar el teu sou.</p>`;
-      }
+  let block = `<div class="option-block">`;
+  block += `<div class="option-name">${name}</div>`;
+  block += `<p>Aquesta opció requereix pagar una quota mensual de <strong>€${quota.toFixed(2)}</strong>, <strong>${monthlyLimit >= quota ? "dins del teu llindar" : "fora del teu llindar"}</strong>.</p>`;
 
-      block += `<p>Pel que fa a les despeses i dipòsit inicial necessites <strong>€${totalNeeded.toFixed(2)}</strong>. Actualment tens uns estalvis de <strong>€${savings.toFixed(2)}</strong>.</p>`;
-      block += `<ul><li>Em sap greu... Encara no pots comprar la teva primera vivenda.</li>`;
-
-      if (savingsCapacity > 0 && missing > 0) {
-        const months = missing / savingsCapacity;
-        const years = Math.floor(months / 12);
-        const remainingMonths = Math.floor(months % 12);
-        const days = Math.floor((months % 1) * 30);
-        block += `<li>Si continues estalviant al ritme actual, en ${years} anys, ${remainingMonths} mesos i ${days} dies et podràs permetre aquesta opció.</li>`;
-      }
-      block += `</ul>`;
+  if (affordable) {
+    block += `<p>${despesText} <strong>€${totalNeeded.toFixed(2)}</strong>. Actualment tens uns estalvis de <strong>€${savings.toFixed(2)}</strong>.</p>`;
+    block += `<ul><li>Enhorabona! Pots procedir a la compra de l'habitatge.</li></ul>`;
+  } else {
+    if (monthlyLimit < quota) {
+      block += `<p>Et recomano intentar buscar opcions per augmentar el teu sou.</p>`;
     }
 
-    block += `</div>`;
-    return block;
+    block += `<p>${despesText} <strong>€${totalNeeded.toFixed(2)}</strong>. Actualment tens uns estalvis de <strong>€${savings.toFixed(2)}</strong>.</p>`;
+    block += `<ul><li>Em sap greu... Encara no pots comprar la teva primera vivenda.</li>`;
+
+    if (savingsCapacity > 0 && missing > 0) {
+      const months = missing / savingsCapacity;
+      const years = Math.floor(months / 12);
+      const remainingMonths = Math.floor(months % 12);
+      const days = Math.floor((months % 1) * 30);
+      block += `<li>Si continues estalviant al ritme actual, en ${years} anys, ${remainingMonths} mesos i ${days} dies et podràs permetre aquesta opció.</li>`;
+    }
+    block += `</ul>`;
   }
+
+  block += `</div>`;
+  return block;
+}
+
 
   function resetPage() {
     location.reload();
